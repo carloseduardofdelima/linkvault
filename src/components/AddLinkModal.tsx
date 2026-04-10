@@ -27,12 +27,14 @@ type FormValues = z.infer<typeof formSchema>
 export function AddLinkModal() {
   const [open, setOpen] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [errorStatus, setErrorStatus] = useState<string | null>(null)
 
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<FormValues>({
     resolver: zodResolver(formSchema)
   })
 
   const onSubmit = async (data: FormValues) => {
+    setErrorStatus(null)
     // Ação real do servidor que fara o scraping e o insert no Postgres
     const result = await addLinkAction(data.url)
     
@@ -45,6 +47,7 @@ export function AddLinkModal() {
         reset()
       }, 1500)
     } else {
+      setErrorStatus(result.error || "Ocorreu um erro ao salvar o link.")
       console.error(result.error)
     }
   }
@@ -84,6 +87,11 @@ export function AddLinkModal() {
                   className={`h-11 ${errors.url ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                 />
                 {errors.url && <p className="text-sm text-red-500 font-medium">{errors.url.message}</p>}
+                {errorStatus && (
+                  <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+                    <span className="text-destructive text-sm font-medium">{errorStatus}</span>
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="pt-4 border-t mt-4">

@@ -15,21 +15,46 @@ export async function logoutAction() {
 
 export async function addLinkAction(url: string, collectionId?: string) {
   try {
-    // 1. Scraping metadados
-    const response = await fetch(url, { headers: { "User-Agent": "bot" } })
-    if (!response.ok) throw new Error("A requisição para o site falhou")
-    
-    const html = await response.text()
-    const $ = cheerio.load(html)
-    
-    const title = $('meta[property="og:title"]').attr("content") || $("title").text() || "Untitled"
-    const description = $('meta[property="og:description"]').attr("content") || $('meta[name="description"]').attr("content") || null
-    let thumbnail = $('meta[property="og:image"]').attr("content") || null
-    
-    // Tratamento básico de thumbnail com URL relativa
-    if (thumbnail && thumbnail.startsWith("/")) {
+    // 1. Scraping metadados (silencioso - se falhar, usamos fallbacks)
+    let title = "Bookmark"
+    let description = null
+    let thumbnail = null
+
+    try {
+      const response = await fetch(url, { 
+        headers: { 
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache"
+        },
+        next: { revalidate: 3600 }
+      })
+      
+      if (response.ok) {
+        const html = await response.text()
+        const $ = cheerio.load(html)
+        
+        title = $('meta[property="og:title"]').attr("content") || $("title").text() || "Untitled"
+        description = $('meta[property="og:description"]').attr("content") || $('meta[name="description"]').attr("content") || null
+        thumbnail = $('meta[property="og:image"]').attr("content") || null
+        
+        // Tratamento básico de thumbnail com URL relativa
+        if (thumbnail && thumbnail.startsWith("/")) {
+          const urlObj = new URL(url)
+          thumbnail = `${urlObj.protocol}//${urlObj.host}${thumbnail}`
+        }
+      } else {
+        console.warn(`Scraping falhou com status ${response.status}. Usando fallbacks.`)
+        // Caso o scraping falhe (403, 404, etc), tentamos pelo menos usar o domínio como título
+        const urlObj = new URL(url)
+        title = urlObj.hostname
+      }
+    } catch (scrapeError) {
+      console.error("Erro durante o scraping:", scrapeError)
       const urlObj = new URL(url)
-      thumbnail = `${urlObj.protocol}//${urlObj.host}${thumbnail}`
+      title = urlObj.hostname
     }
 
     // 2. Pegar usuário real da sessão
@@ -75,8 +100,9 @@ export async function addLinkAction(url: string, collectionId?: string) {
     revalidatePath("/")
     
     return { success: true, bookmark: newBookmark }
-  } catch (error) {
-    console.error("Erro ao salvar link:", error)
-    return { success: false, error: "Falha ao processar a URL. Verifique a validade." }
+  } catch (error: any) {
+    const errorMessage = error instanceof Error ? error.message : "Falha desconhecida"
+    console.error("Erro ao salvar link:", errorMessage)
+    return { success: false, error: errorMessage }
   }
 }
