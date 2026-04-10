@@ -73,7 +73,7 @@ export default async function Home() {
       <div className="bg-card/60 border-b backdrop-blur-md sticky top-20 z-0 transition-colors">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="flex items-center gap-3 h-16 overflow-x-auto no-scrollbar py-2">
-            {collections.map((col, idx) => (
+            {collections.map((col: any, idx: number) => (
               <button
                 key={idx}
                 className={`flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full border transition-all text-sm font-medium ${
@@ -139,7 +139,7 @@ export default async function Home() {
                     {link.url}
                   </a>
                   <div className="flex flex-wrap gap-2">
-                    {link.tags.map((tag) => (
+                    {link.tags.map((tag: any) => (
                       <Badge key={tag.id} variant="secondary" className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium border-0 rounded-md px-2.5 py-0.5">
                         #{tag.name}
                       </Badge>
