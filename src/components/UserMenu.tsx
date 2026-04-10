@@ -6,18 +6,19 @@ import {
 } from "@/components/ui/avatar" 
 import { LogIn, LogOut, User } from "lucide-react"
 import { Session } from "next-auth"
-import { loginAction, logoutAction } from "@/app/actions"
+import Link from "next/link"
+import { logoutAction } from "@/app/actions"
 
 export async function UserMenu({ session }: { session: Session | null }) {
 
   if (!session?.user) {
     return (
-      <form action={loginAction}>
+      <Link href="/login">
         <Button variant="outline" className="rounded-xl border-border bg-card h-11 px-6 font-medium text-foreground hover:bg-muted transition-colors">
           <LogIn className="w-4 h-4 mr-2" />
           Entrar
         </Button>
-      </form>
+      </Link>
     )
   }
 

@@ -7,6 +7,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma) as any,
   providers: [Google],
   session: { strategy: "jwt" }, // Usando JWT por ser mais escalável com Redis ou Upstash se necessário depois
+  pages: {
+    signIn: "/login",
+  },
   callbacks: {
     async session({ session, token }) {
       if (token.sub && session.user) {
