@@ -110,7 +110,7 @@ export default async function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {linksDB.map((link) => (
+          {linksDB.map((link: any) => (
             <Card key={link.id} className="overflow-hidden bg-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-border flex flex-col group rounded-2xl">
               <div className="relative h-48 overflow-hidden bg-muted">
                 <img 
