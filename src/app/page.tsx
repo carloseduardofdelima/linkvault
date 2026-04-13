@@ -1,12 +1,10 @@
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Search, Plus, ExternalLink, Bookmark as BookmarkIcon } from "lucide-react"
+import { Search, Bookmark as BookmarkIcon } from "lucide-react"
 import { AddLinkModal } from "@/components/AddLinkModal"
 import { CreateTagModal } from "@/components/CreateTagModal"
 import { UserMenu } from "@/components/UserMenu"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { LinkCard } from "@/components/LinkCard"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import Link from "next/link"
@@ -149,55 +147,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {linksDB.map((link: any) => (
-              <Card key={link.id} className="overflow-hidden bg-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-border flex flex-col group rounded-2xl">
-                <div className="relative h-48 overflow-hidden bg-muted">
-                  <img 
-                    src={link.thumbnail || "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80"} 
-                    alt={link.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-semibold text-foreground shadow-sm border border-border flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                    {link.clicks} cliques
-                  </div>
-                </div>
-                <CardContent className="px-5 flex flex-col flex-1">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
-                      {link.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-1 leading-relaxed">
-                      {link.description}
-                  </p>
-                  </div>
-                  
-                  <div className="mt-auto">
-                    <a href={`https://${link.url}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-blue-600 transition-colors truncate w-full">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      {link.url}
-                    </a>
-                    <div className="flex flex-wrap gap-2">
-                      {link.tags.map((tag: any) => (
-                        <Link 
-                          href={`/?tag=${tag.name}`}
-                          key={tag.id} 
-                        >
-                          <Badge 
-                            variant="secondary" 
-                            className={`font-medium border-0 rounded-md px-2.5 py-0.5 transition-colors ${
-                              activeTag === tag.name 
-                                ? "bg-blue-600 text-white" 
-                                : "bg-muted hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-600 text-muted-foreground"
-                            }`}
-                          >
-                            #{tag.name}
-                          </Badge>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <LinkCard key={link.id} link={link} activeTag={activeTag} />
             ))}
           </div>
         )}
