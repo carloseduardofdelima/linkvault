@@ -197,3 +197,51 @@ export async function createTagAction(name: string) {
   }
 }
 
+export async function updateLinkAction(id: string, title: string, tagNames: string[]) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return { success: false, error: "Você precisa estar logado." }
+    }
+
+    const tagConnectOrCreate = tagNames.map(name => ({
+      where: { name },
+      create: { name }
+    }))
+
+    await prisma.bookmark.update({
+      where: { id },
+      data: {
+        title: title.substring(0, 150),
+        tags: {
+          set: [],
+          connectOrCreate: tagConnectOrCreate
+        }
+      }
+    })
+
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Erro ao atualizar link" }
+  }
+}
+
+export async function deleteLinkAction(id: string) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return { success: false, error: "Você precisa estar logado." }
+    }
+
+    await prisma.bookmark.delete({
+      where: { id }
+    })
+
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Erro ao deletar link" }
+  }
+}
+

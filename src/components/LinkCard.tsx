@@ -2,8 +2,9 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, Pencil } from "lucide-react"
 import Link from "next/link"
+import { EditLinkModal } from "./EditLinkModal"
 
 interface LinkCardProps {
   link: {
@@ -40,6 +41,14 @@ export function LinkCard({ link, activeTag }: LinkCardProps) {
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
             {link.clicks} cliques
           </div>
+          <EditLinkModal 
+            link={link}
+            trigger={
+              <button className="absolute top-3 left-3 bg-card/90 backdrop-blur-sm p-2 rounded-full text-foreground shadow-sm border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card hover:scale-110">
+                <Pencil className="w-4 h-4" />
+              </button>
+            }
+          />
         </div>
         <CardContent className="px-5 flex flex-col flex-1">
           <div className="flex items-start gap-3 flex-1">
@@ -55,36 +64,39 @@ export function LinkCard({ link, activeTag }: LinkCardProps) {
               <h3 className="font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
                 {link.title}
               </h3>
-            <p className="text-sm text-muted-foreground line-clamp-2 mb-1 leading-relaxed">
+            <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-2 leading-relaxed">
               {link.description}
             </p>
             </div>
           </div>
           
           <div className="mt-auto">
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-blue-600 transition-colors truncate w-full">
+            <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors truncate w-full mb-3">
               <ExternalLink className="w-3.5 h-3.5" />
               {link.url}
             </span>
-            <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-              {link.tags.map((tag) => (
-                <Link 
-                  href={`/?tag=${tag.name}`}
-                  key={tag.id}
-                >
-                  <Badge 
-                    variant="secondary" 
-                    className={`font-medium border-0 rounded-md px-2.5 py-0.5 transition-colors ${
-                      activeTag === tag.name 
-                        ? "bg-blue-600 text-white" 
-                        : "bg-muted hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-600 text-muted-foreground"
-                    }`}
+            {link.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                {link.tags.map((tag) => (
+                  <Link 
+                    href={`/?tag=${tag.name}`}
+                    key={tag.id}
+                    className="no-underline"
                   >
-                    #{tag.name}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
+                    <Badge 
+                      variant="outline"
+                      className={`text-xs font-medium rounded-full px-2.5 py-0.5 transition-all cursor-pointer ${
+                        activeTag === tag.name 
+                          ? "bg-blue-500 text-white border-blue-500" 
+                          : "border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 dark:text-slate-300"
+                      }`}
+                    >
+                      {tag.name}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
