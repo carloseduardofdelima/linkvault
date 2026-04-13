@@ -15,7 +15,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { X, Trash2, CheckCircle2 } from "lucide-react"
+import { X, Trash2, CheckCircle2, Pencil } from "lucide-react"
 import { updateLinkAction, deleteLinkAction, getTagsAction } from "@/app/actions"
 
 const formSchema = z.object({
@@ -32,10 +32,9 @@ interface EditLinkModalProps {
     url: string
     tags: { id: string; name: string }[]
   }
-  trigger: React.ReactNode
 }
 
-export function EditLinkModal({ link, trigger }: EditLinkModalProps) {
+export function EditLinkModal({ link }: EditLinkModalProps) {
   const [open, setOpen] = useState(false)
   const [success, setSuccess] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -94,9 +93,15 @@ export function EditLinkModal({ link, trigger }: EditLinkModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div onClick={(e) => { e.stopPropagation(); setOpen(true) }}>
-        {trigger}
-      </div>
+      <button 
+        className="absolute top-3 left-3 bg-card/90 backdrop-blur-sm p-2 rounded-full text-foreground shadow-sm border border-border hover:bg-card hover:scale-110 transition-transform z-20 cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen(true)
+        }}
+      >
+        <Pencil className="w-4 h-4" />
+      </button>
       <DialogContent className="sm:max-w-[425px]">
         {success ? (
           <div className="flex flex-col items-center justify-center py-10 space-y-4">
