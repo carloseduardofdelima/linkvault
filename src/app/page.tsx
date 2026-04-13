@@ -4,27 +4,42 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Search, Plus, ExternalLink, Bookmark as BookmarkIcon } from "lucide-react"
 import { AddLinkModal } from "@/components/AddLinkModal"
+import { CreateTagModal } from "@/components/CreateTagModal"
 import { UserMenu } from "@/components/UserMenu"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
+import Link from "next/link"
 
 export const dynamic = "force-dynamic"
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const session = await auth()
+  const params = await searchParams
+  const activeTag = typeof params.tag === "string" ? params.tag : "Todos"
   
-  const collections = [
-    { name: "Todos", count: 78, active: true },
-    { name: "Design Inspiration", count: 12, color: "bg-purple-500" },
-    { name: "Development", count: 24, color: "bg-blue-500" },
-    { name: "Marketing", count: 8, color: "bg-pink-500" },
-    { name: "Productivity", count: 15, color: "bg-emerald-500" },
-    { name: "Learning", count: 19, color: "bg-orange-500" },
-  ]
+  // Puxar todas as tags do usuário/banco para usar como "Categorias/Coleções"
+  const allTags = await prisma.tag.findMany({
+    include: {
+      _count: {
+        select: { bookmarks: true }
+      }
+    },
+    orderBy: { name: "asc" }
+  })
 
-  // Puxar links dinamicamente do banco através da Collection associada
+  // Total de links para o botão "Todos"
+  const totalLinks = await prisma.bookmark.count()
+
+  // Puxar links dinamicamente do banco com filtros
   const linksDB = await prisma.bookmark.findMany({
+    where: {
+      ...(activeTag !== "Todos" ? {
+        tags: {
+          some: { name: activeTag }
+        }
+      } : {}),
+    },
     orderBy: { createdAt: "desc" },
     include: {
       tags: true
@@ -38,15 +53,15 @@ export default async function Home() {
         <div className="container mx-auto px-4 lg:px-8">
           <div className="flex items-center justify-between h-20 gap-8">
             {/* Logo */}
-            <div className="flex items-center gap-3 shrink-0">
+            <Link href="/" className="flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity">
               <div className="bg-blue-600 rounded-lg p-2 text-white">
                 <BookmarkIcon className="w-6 h-6" />
               </div>
               <div>
                 <h1 className="font-bold text-xl leading-tight text-foreground">LinkVault</h1>
-                <p className="text-xs text-muted-foreground">Organize seus links favoritos</p>
+                <p className="text-xs text-muted-foreground">Sua biblioteca de links unificada</p>
               </div>
-            </div>
+            </Link>
 
             {/* Search */}
             <div className="flex-1 max-w-3xl relative">
@@ -54,6 +69,7 @@ export default async function Home() {
               <Input 
                 placeholder="Buscar por título, URL ou tag..." 
                 className="w-full pl-10 bg-muted/50 border-border h-12 rounded-xl text-md focus-visible:ring-blue-600 focus-visible:bg-background transition-colors"
+                defaultValue={activeTag !== "Todos" ? `#${activeTag}` : ""}
               />
             </div>
 
@@ -69,88 +85,124 @@ export default async function Home() {
         </div>
       </header>
 
-      {/* Collections Scroller */}
+      {/* Tags Scroller (Unified with Collections) */}
       <div className="bg-card/60 border-b backdrop-blur-md sticky top-20 z-0 transition-colors">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="flex items-center gap-3 h-16 overflow-x-auto no-scrollbar py-2">
-            {collections.map((col: any, idx: number) => (
-              <button
-                key={idx}
+            {/* Botão Todos */}
+            <Link
+              href="/"
+              className={`flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full border transition-all text-sm font-medium ${
+                activeTag === "Todos" 
+                  ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/10" 
+                  : "bg-card border-border text-muted-foreground hover:border-slate-300 dark:hover:border-slate-700 hover:bg-muted"
+              }`}
+            >
+              {activeTag === "Todos" && <span className="text-primary-foreground/70">🌐</span>}
+              Todos
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                activeTag === "Todos" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+              }`}>
+                {totalLinks}
+              </span>
+            </Link>
+
+            <div className="w-px h-6 bg-border mx-1" />
+
+            {/* Tags dinâmicas atuando como categorias */}
+            {allTags.map((tag: any) => (
+              <Link
+                key={tag.id}
+                href={`/?tag=${tag.name}`}
                 className={`flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full border transition-all text-sm font-medium ${
-                  col.active 
+                  activeTag === tag.name 
                     ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/10" 
                     : "bg-card border-border text-muted-foreground hover:border-slate-300 dark:hover:border-slate-700 hover:bg-muted"
                 }`}
               >
-                {!col.active && col.color && (
-                  <span className={`w-2 h-2 rounded-full ${col.color}`} />
-                )}
-                {col.active && <span className="text-primary-foreground/70">🌐</span>}
-                {col.name}
+                {activeTag !== tag.name && <span className="w-2 h-2 rounded-full bg-slate-400" />}
+                {tag.name}
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                  col.active ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                  activeTag === tag.name ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
                 }`}>
-                  {col.count}
+                  {tag._count.bookmarks}
                 </span>
-              </button>
+              </Link>
             ))}
-            <button className="flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full border border-dashed border-border text-muted-foreground hover:border-slate-400 hover:text-foreground hover:bg-muted transition-all text-sm font-medium ml-2">
-              <Plus className="w-4 h-4" />
-              Nova Coleção
-            </button>
+
+            <div className="w-px h-6 bg-border mx-2" />
+            
+            <CreateTagModal />
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 lg:px-8 pt-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-foreground tracking-tight">Todos os Links</h2>
-          <p className="text-muted-foreground mt-1">{linksDB.length} links</p>
-        </div>
+        {/* Main Content */}
+        <main className="container mx-auto px-4 lg:px-8 mt-6">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {linksDB.map((link: any) => (
-            <Card key={link.id} className="overflow-hidden bg-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-border flex flex-col group rounded-2xl">
-              <div className="relative h-48 overflow-hidden bg-muted">
-                <img 
-                  src={link.thumbnail || "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80"} 
-                  alt={link.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-semibold text-foreground shadow-sm border border-border flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                  {link.clicks} cliques
-                </div>
-              </div>
-              <CardContent className="p-5 flex flex-col flex-1">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900 mb-2 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
-                    {link.title}
-                  </h3>
-                  <p className="text-sm text-slate-500 line-clamp-2 mb-4 leading-relaxed">
-                    {link.description}
-                  </p>
-                </div>
-                
-                <div className="mt-auto">
-                  <a href={`https://${link.url}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-blue-600 transition-colors mb-4 truncate w-full">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    {link.url}
-                  </a>
-                  <div className="flex flex-wrap gap-2">
-                    {link.tags.map((tag: any) => (
-                      <Badge key={tag.id} variant="secondary" className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium border-0 rounded-md px-2.5 py-0.5">
-                        #{tag.name}
-                      </Badge>
-                    ))}
+        {linksDB.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed rounded-3xl">
+            <BookmarkIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+            <h3 className="text-lg font-medium text-foreground">Nenhum link encontrado</h3>
+            <p className="text-muted-foreground">Tente outra busca ou remova os filtros.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {linksDB.map((link: any) => (
+              <Card key={link.id} className="overflow-hidden bg-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-border flex flex-col group rounded-2xl">
+                <div className="relative h-48 overflow-hidden bg-muted">
+                  <img 
+                    src={link.thumbnail || "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80"} 
+                    alt={link.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-semibold text-foreground shadow-sm border border-border flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                    {link.clicks} cliques
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <CardContent className="px-5 flex flex-col flex-1">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
+                      {link.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-1 leading-relaxed">
+                      {link.description}
+                  </p>
+                  </div>
+                  
+                  <div className="mt-auto">
+                    <a href={`https://${link.url}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-blue-600 transition-colors truncate w-full">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      {link.url}
+                    </a>
+                    <div className="flex flex-wrap gap-2">
+                      {link.tags.map((tag: any) => (
+                        <Link 
+                          href={`/?tag=${tag.name}`}
+                          key={tag.id} 
+                        >
+                          <Badge 
+                            variant="secondary" 
+                            className={`font-medium border-0 rounded-md px-2.5 py-0.5 transition-colors ${
+                              activeTag === tag.name 
+                                ? "bg-blue-600 text-white" 
+                                : "bg-muted hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-600 text-muted-foreground"
+                            }`}
+                          >
+                            #{tag.name}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   )
 }
+

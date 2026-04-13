@@ -4,16 +4,65 @@ import * as cheerio from "cheerio"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { auth, signIn, signOut } from "@/auth"
+import bcrypt from "bcryptjs"
 
 export async function loginAction() {
   await signIn("google")
+}
+
+export async function loginCredentialsAction(formData: FormData) {
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+  
+  if (!email || !password) return { error: "Preencha todos os campos" }
+
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/",
+    })
+  } catch (error: any) {
+    if (error.type === "CredentialsSignin") {
+      return { error: "Email ou senha inválidos" }
+    }
+    throw error
+  }
+}
+
+export async function registerAction(formData: FormData) {
+  const name = formData.get("name") as string
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+
+  if (!email || !password) return { error: "Preencha todos os campos" }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
+  })
+
+  if (existingUser) {
+    return { error: "Usuário já existe" }
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10)
+
+  await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashedPassword
+    }
+  })
+
+  return { success: true }
 }
 
 export async function logoutAction() {
   await signOut()
 }
 
-export async function addLinkAction(url: string, collectionId?: string) {
+export async function addLinkAction(url: string, collectionId?: string, tagNames: string[] = []) {
   try {
     // 1. Scraping metadados (silencioso - se falhar, usamos fallbacks)
     let title = "Bookmark"
@@ -82,21 +131,33 @@ export async function addLinkAction(url: string, collectionId?: string) {
       targetCollectionId = coll.id
     }
 
-    // 3. Salvar no banco
+    // 3. Preparar tags (conectar existentes ou criar novas)
+    const tagConnectOrCreate = tagNames.map(name => ({
+      where: { name },
+      create: { name }
+    }))
+
+    // 4. Salvar no banco
     const urlObj = new URL(url)
-    const baseUrl = urlObj.host // para mostrar limpo igual o design do Notion
+    const baseUrl = urlObj.host
 
     const newBookmark = await prisma.bookmark.create({
       data: {
-        url: baseUrl, // ou url completo
+        url: baseUrl,
         title: title.substring(0, 150),
         description: description ? description.substring(0, 250) : null,
         thumbnail: thumbnail,
         collectionId: targetCollectionId,
+        tags: {
+          connectOrCreate: tagConnectOrCreate
+        }
+      },
+      include: {
+        tags: true
       }
     })
 
-    // 4. Revalidar a home pra atualizar a lista
+    // 5. Revalidar a home pra atualizar a lista
     revalidatePath("/")
     
     return { success: true, bookmark: newBookmark }
@@ -106,3 +167,33 @@ export async function addLinkAction(url: string, collectionId?: string) {
     return { success: false, error: errorMessage }
   }
 }
+
+export async function getTagsAction() {
+  try {
+    const tags = await prisma.tag.findMany({
+      orderBy: { name: "asc" }
+    })
+    return { success: true, tags }
+  } catch (error) {
+    return { success: false, tags: [] }
+  }
+}
+
+export async function createTagAction(name: string) {
+  try {
+    const normalized = name.trim().toLowerCase()
+    if (!normalized) return { success: false, error: "Nome da tag é obrigatório" }
+
+    const tag = await prisma.tag.upsert({
+      where: { name: normalized },
+      update: {},
+      create: { name: normalized }
+    })
+
+    revalidatePath("/")
+    return { success: true, tag }
+  } catch (error) {
+    return { success: false, error: "Erro ao criar tag" }
+  }
+}
+
